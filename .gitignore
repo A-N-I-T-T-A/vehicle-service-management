@@ -1,7 +1,10 @@
+__pycache__/
+*.py[cod]
+.env
+*.env
+*.pem
+*.key
+site_config.json
+common_site_config.json
+*.log
 .DS_Store
-*.pyc
-*.egg-info
-*.swp
-tags
-node_modules
-__pycache__
