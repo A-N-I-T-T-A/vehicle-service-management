@@ -1,0 +1,583 @@
+{
+  "info": {
+    "_postman_id": "43e2d47b-bc83-4e74-9df1-e96993b3d5e7",
+    "name": "Vehicle Service Management - Reworked",
+    "description": "Configure collection variables before running. Positive status update requires a permitted Workflow transition.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "YOUR_API_KEY",
+      "type": "string"
+    },
+    {
+      "key": "api_secret",
+      "value": "YOUR_API_SECRET",
+      "type": "string"
+    },
+    {
+      "key": "customer",
+      "value": "CUSTOMER-ID",
+      "type": "string"
+    },
+    {
+      "key": "vehicle",
+      "value": "VEHICLE-REGISTRATION-NAME",
+      "type": "string"
+    },
+    {
+      "key": "booking_date",
+      "value": "2026-10-30",
+      "type": "string"
+    },
+    {
+      "key": "service_type",
+      "value": "General Service",
+      "type": "string"
+    },
+    {
+      "key": "booking_name",
+      "value": "SB-2026-00003",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get logged-in user",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/frappe.auth.get_logged_user",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "frappe.auth.get_logged_user"
+          ]
+        },
+        "description": "Checks the authenticated Frappe user. Configure api_key and api_secret in collection variables."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Request succeeds\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Logged-in user is returned\", function () { pm.expect(pm.response.json()).to.have.property(\"message\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create booking - valid",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.create_service_booking",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.create_service_booking"
+          ]
+        },
+        "description": "Use a valid customer, vehicle belonging to that customer, a current/future booking date, and a valid service type.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer\": \"{{customer}}\",\n  \"vehicle\": \"{{vehicle}}\",\n  \"booking_date\": \"{{booking_date}}\",\n  \"service_type\": \"{{service_type}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Booking creation succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+              "const json = pm.response.json();",
+              "if (json.message && json.message.name) { pm.collectionVariables.set(\"booking_name\", json.message.name); }",
+              "pm.test(\"Response includes booking name and status\", function () { pm.expect(json.message).to.have.property(\"name\"); pm.expect(json.message).to.have.property(\"status\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get service booking - valid",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.get_service_booking?name={{booking_name}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.get_service_booking"
+          ],
+          "query": [
+            {
+              "key": "name",
+              "value": "{{booking_name}}",
+              "description": "Name returned by Create booking - valid"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Booking retrieval succeeds\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Response includes booking details\", function () { const json = pm.response.json(); pm.expect(json.message).to.have.property(\"name\"); pm.expect(json.message).to.have.property(\"status\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update booking status - valid",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.update_booking_status",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.update_booking_status"
+          ]
+        },
+        "description": "Run after creating a booking with status Booked. The active Workflow must permit the transition.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{booking_name}}\",\n  \"status\": \"Confirmed\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status update succeeds when transition is allowed\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Response contains updated status\", function () { pm.expect(pm.response.json().message).to.have.property(\"status\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create booking - missing required field",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.create_service_booking",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.create_service_booking"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer\": \"{{customer}}\",\n  \"vehicle\": \"{{vehicle}}\",\n  \"booking_date\": \"{{booking_date}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Missing service_type is rejected\", function () { pm.expect(pm.response.code).to.be.oneOf([400, 417, 422]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create booking - invalid service type",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.create_service_booking",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.create_service_booking"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer\": \"{{customer}}\",\n  \"vehicle\": \"{{vehicle}}\",\n  \"booking_date\": \"{{booking_date}}\",\n  \"service_type\": \"Not A Service\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid service type is rejected\", function () { pm.expect(pm.response.code).to.be.oneOf([400, 417, 422]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get service booking - missing record",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.get_service_booking?name=DOES-NOT-EXIST",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.get_service_booking"
+          ],
+          "query": [
+            {
+              "key": "name",
+              "value": "DOES-NOT-EXIST",
+              "description": "Intentionally nonexistent booking"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Missing booking is rejected\", function () { pm.expect(pm.response.code).to.be.oneOf([404, 417]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update status - missing required field",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.update_booking_status",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.update_booking_status"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{booking_name}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Missing status is rejected\", function () { pm.expect(pm.response.code).to.be.oneOf([400, 417, 422]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update status - invalid status",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.update_booking_status",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.update_booking_status"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{booking_name}}\",\n  \"status\": \"Waiting\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid status is rejected\", function () { pm.expect(pm.response.code).to.be.oneOf([400, 417, 422]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unauthorized - create booking without token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.create_service_booking",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.create_service_booking"
+          ]
+        },
+        "description": "Intentionally omits Authorization. Ensure no inherited auth/cookies are sent.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer\": \"{{customer}}\",\n  \"vehicle\": \"{{vehicle}}\",\n  \"booking_date\": \"{{booking_date}}\",\n  \"service_type\": \"{{service_type}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Unauthenticated request is rejected\", function () { pm.expect(pm.response.code).to.be.oneOf([401, 403, 417]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Technician - create booking forbidden",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "token {{api_key}}:{{api_secret}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/method/vehicle_service.api.create_service_booking",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "method",
+            "vehicle_service.api.create_service_booking"
+          ]
+        },
+        "description": "Run with Technician API credentials; the Service Advisor role check should reject it.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer\": \"{{customer}}\",\n  \"vehicle\": \"{{vehicle}}\",\n  \"booking_date\": \"{{booking_date}}\",\n  \"service_type\": \"{{service_type}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Technician cannot create bookings\", function () { pm.expect(pm.response.code).to.be.oneOf([403, 417]); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

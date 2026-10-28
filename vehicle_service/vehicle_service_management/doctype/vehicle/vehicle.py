@@ -13,7 +13,6 @@ class Vehicle(Document):
         if not self.registration_number:
             frappe.throw("Registration Number is required.")
 
-        # Normalize registration numbers to avoid case/space variations
         self.registration_number = self.registration_number.strip().upper()
 
         existing_vehicle = frappe.db.exists(

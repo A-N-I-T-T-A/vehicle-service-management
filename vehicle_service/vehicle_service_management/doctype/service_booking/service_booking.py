@@ -12,6 +12,7 @@ class ServiceBooking(Document):
         self.validate_vehicle_customer()
         self.validate_booking_date()
         self.validate_vehicle_availability()
+        self.validate_status_transition()
 
     def validate_vehicle_customer(self):
         if not self.customer or not self.vehicle:
@@ -55,4 +56,30 @@ class ServiceBooking(Document):
         if existing_booking:
             frappe.throw(
                 "This vehicle already has an active booking on this date."
+            )
+
+    def validate_status_transition(self):
+        previous = self.get_doc_before_save()
+
+        if not previous or previous.status == self.status:
+            return
+
+        self.check_status_transition(previous.status, self.status)
+
+    @staticmethod
+    def check_status_transition(previous_status, new_status):
+        allowed_transitions = {
+            "Booked": ["Confirmed", "Cancelled"],
+            "Confirmed": ["In Progress", "Cancelled"],
+            "In Progress": ["Completed", "Cancelled"],
+            "Completed": [],
+            "Cancelled": [],
+        }
+
+        allowed = allowed_transitions.get(previous_status, [])
+
+        if new_status not in allowed:
+            frappe.throw(
+                f"Cannot change booking status from "
+                f"{previous_status} to {new_status}."
             )

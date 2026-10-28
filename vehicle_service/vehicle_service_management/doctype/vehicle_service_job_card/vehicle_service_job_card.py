@@ -46,29 +46,34 @@ class VehicleServiceJobCard(Document):
         if not self.service_booking:
             return
 
+        new_booking_status = None
+
         if self.status == "In Progress":
-            frappe.db.set_value(
-                "Service Booking",
-                self.service_booking,
-                "status",
-                "In Progress",
-            )
-
+            new_booking_status = "In Progress"
         elif self.status == "Completed":
-            frappe.db.set_value(
-                "Service Booking",
-                self.service_booking,
-                "status",
-                "Completed",
-            )
-
+            new_booking_status = "Completed"
         elif self.status == "Cancelled":
-            frappe.db.set_value(
-                "Service Booking",
-                self.service_booking,
-                "status",
-                "Cancelled",
-            )
+            new_booking_status = "Cancelled"
+
+        if not new_booking_status:
+            return
+
+        booking = frappe.get_doc("Service Booking", self.service_booking)
+
+        if booking.status == new_booking_status:
+            return
+
+        booking.check_status_transition(
+            booking.status,
+            new_booking_status,
+        )
+
+        frappe.db.set_value(
+            "Service Booking",
+            booking.name,
+            "status",
+            new_booking_status,
+        )
     
     
     def validate_tasks_for_progress(self):
